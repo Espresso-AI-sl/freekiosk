@@ -317,7 +317,7 @@ Device information.
 | Field | Type | Description |
 |---|---|---|
 | **isDeviceOwner** | boolean | Whether the app has Device Owner privileges (required for reboot, lock, true screen off) |
-| **kioskMode** | boolean | Whether kiosk lock task mode is currently active |
+| **kioskMode** | boolean | Whether Lock Mode is enabled (kiosk lock task) |
 
 
 
@@ -499,6 +499,12 @@ Enable the screensaver setting. The screensaver will activate automatically afte
 
 #### `GET|POST /api/screensaver/off`
 Disable the screensaver setting. The screensaver will no longer activate on inactivity. If the screensaver is currently active, it will be deactivated.
+
+#### `GET|POST /api/kiosk/on`
+Enable Lock Mode (kiosk lock task). Persists the setting and starts lock task with the same whitelist and feature flags as enabling it in Settings → Security. Reflected in `device.kioskMode` on `/api/status` and `/api/info`.
+
+#### `GET|POST /api/kiosk/off`
+Disable Lock Mode (kiosk lock task). Persists the setting and stops lock task. The device stays on the kiosk screen but is no longer pinned; lock task re-engages only after `/api/kiosk/on` or enabling Lock Mode in Settings.
 
 #### `GET|POST /api/reload`
 Reload the current WebView page.
@@ -892,6 +898,9 @@ rest:
       - name: "Tablet Screensaver"
         value_template: "{{ value_json.data.screen.screensaverActive }}"
 
+      - name: "Tablet Kiosk Mode"
+        value_template: "{{ value_json.data.device.kioskMode }}"
+
   - resource: http://TABLET_IP:8080/api/location
     scan_interval: 300
     sensor:
@@ -981,6 +990,14 @@ rest_command:
   
   tablet_screensaver_off:
     url: http://TABLET_IP:8080/api/screensaver/off
+    method: POST
+  
+  tablet_kiosk_on:
+    url: http://TABLET_IP:8080/api/kiosk/on
+    method: POST
+  
+  tablet_kiosk_off:
+    url: http://TABLET_IP:8080/api/kiosk/off
     method: POST
   
   tablet_keyboard_key:

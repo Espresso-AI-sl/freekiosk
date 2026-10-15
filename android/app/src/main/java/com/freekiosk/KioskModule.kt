@@ -636,6 +636,9 @@ class KioskModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                             android.util.Log.d("KioskModule", "Full lock task started (Device Owner) with whitelist: $uniqueWhitelist")
                             // Update DE boot flag so the next LOCKED_BOOT_COMPLETED also locks immediately
                             BootReceiver.updateDeBootFlag(reactApplicationContext, true)
+                            // Lock Mode may have been turned on at runtime (Settings / REST); ensure the
+                            // watchdog is in kiosk-guard mode, not only keep-alive.
+                            KioskWatchdogService.startForKiosk(reactApplicationContext)
                             
                             // Safety net: force unmute audio streams after entering lock task
                             // Samsung/OneUI devices may mute audio in LOCK_TASK_MODE_LOCKED
@@ -658,6 +661,8 @@ class KioskModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                         } else {
                             activity.startLockTask()
                             android.util.Log.d("KioskModule", "Screen pinning started")
+                            BootReceiver.updateDeBootFlag(reactApplicationContext, true)
+                            KioskWatchdogService.startForKiosk(reactApplicationContext)
                         }
                         promise.resolve(true)
                     } catch (e: Exception) {
@@ -686,6 +691,13 @@ class KioskModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                             dpm.setScreenCaptureDisabled(adminComponent, false)
                         }
                         activity.stopLockTask()
+                        // Permanent Lock Mode off writes @kiosk_enabled=false before this call
+                        // (Settings save / REST /api/kiosk/off). Clear the DE fast-boot flag so
+                        // the next LOCKED_BOOT_COMPLETED does not re-lock. Temporary unlocks
+                        // (opening system Settings) leave the flag set because storage stays true.
+                        if (!isKioskEnabledInStorage()) {
+                            BootReceiver.updateDeBootFlag(reactApplicationContext, false)
+                        }
                         android.util.Log.d("KioskModule", "Lock task stopped")
                         promise.resolve(true)
                     } catch (e: Exception) {
@@ -1627,6 +1639,27 @@ class KioskModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
             result
         } catch (e: Exception) {
             android.util.Log.w("KioskModule", "Could not read print enabled setting: ${e.message}")
+            false
+        }
+    }
+
+    /** Read Lock Mode (`@kiosk_enabled`) from AsyncStorage without going through the JS bridge. */
+    private fun isKioskEnabledInStorage(): Boolean {
+        return try {
+            val dbPath = reactApplicationContext.getDatabasePath("RKStorage").absolutePath
+            val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbPath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            )
+            val cursor = db.rawQuery(
+                "SELECT value FROM catalystLocalStorage WHERE key = ?",
+                arrayOf("@kiosk_enabled")
+            )
+            val result = cursor.moveToFirst() && cursor.getString(0) == "true"
+            cursor.close()
+            db.close()
+            result
+        } catch (e: Exception) {
+            android.util.Log.w("KioskModule", "Could not read kiosk enabled setting: ${e.message}")
             false
         }
     }

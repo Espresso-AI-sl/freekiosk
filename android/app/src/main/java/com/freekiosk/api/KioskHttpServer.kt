@@ -109,6 +109,8 @@ class KioskHttpServer(
                 isGetOrPost && uri == "/api/screen/off" -> handleScreenOff()
                 isGetOrPost && uri == "/api/screensaver/on" -> handleScreensaverOn()
                 isGetOrPost && uri == "/api/screensaver/off" -> handleScreensaverOff()
+                isGetOrPost && uri == "/api/kiosk/on" -> handleKioskOn()
+                isGetOrPost && uri == "/api/kiosk/off" -> handleKioskOff()
                 isGetOrPost && uri == "/api/reload" -> handleReload()
                 isGetOrPost && uri == "/api/wake" -> handleWake()
                 isGetOrPost && uri == "/api/reboot" -> handleReboot()
@@ -196,6 +198,8 @@ class KioskHttpServer(
                     put("/api/screen/off - Turn screen off")
                     put("/api/screensaver/on - Activate screensaver")
                     put("/api/screensaver/off - Deactivate screensaver")
+                    put("/api/kiosk/on - Enable Lock Mode (kiosk lock task)")
+                    put("/api/kiosk/off - Disable Lock Mode (kiosk lock task)")
                     put("/api/reload - Reload WebView")
                     put("/api/wake - Wake from screensaver")
                     put("/api/reboot - Reboot device (Device Owner)")
@@ -312,6 +316,18 @@ class KioskHttpServer(
     private fun handleScreensaverOff(): Response {
         checkControlAllowed()?.let { return it }
         val result = commandHandler("screensaverOff", null)
+        return jsonSuccess(result)
+    }
+
+    private fun handleKioskOn(): Response {
+        checkControlAllowed()?.let { return it }
+        val result = commandHandler("kioskOn", null)
+        return jsonSuccess(result)
+    }
+
+    private fun handleKioskOff(): Response {
+        checkControlAllowed()?.let { return it }
+        val result = commandHandler("kioskOff", null)
         return jsonSuccess(result)
     }
 

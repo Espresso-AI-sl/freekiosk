@@ -51,6 +51,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   // #177 — Pause WebView audio/video when the page is hidden (screensaver / screen off / background)
   const [pauseWebMediaWhenHidden, setPauseWebMediaWhenHidden] = useState<boolean>(true);
   const [screensaverEnabled, setScreensaverEnabled] = useState(false);
+  const [kioskEnabled, setKioskEnabled] = useState(false);
   const [isScreensaverActive, setIsScreensaverActive] = useState(false);
   const [defaultBrightness, setDefaultBrightness] = useState<number>(0.5);
   const [screensaverBrightness, setScreensaverBrightness] = useState<number>(0);
@@ -548,6 +549,22 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
           resetTimer();
           console.log('[API] Screensaver setting DISABLED');
         },
+        onKioskOn: async () => {
+          // Persist Lock Mode, then re-run loadSettings() so startLockTask uses the same
+          // whitelist / feature flags as enabling it from Settings.
+          await StorageService.saveKioskEnabled(true);
+          setKioskEnabled(true);
+          await loadSettings();
+          ApiService.updateStatus({ kioskMode: true });
+          console.log('[API] Kiosk Lock Mode ENABLED');
+        },
+        onKioskOff: async () => {
+          await StorageService.saveKioskEnabled(false);
+          setKioskEnabled(false);
+          await loadSettings();
+          ApiService.updateStatus({ kioskMode: false });
+          console.log('[API] Kiosk Lock Mode DISABLED');
+        },
         onScreenOn: () => {
           console.log('[API] Screen ON');
           // Deactivate screensaver overlay immediately — covers both the case where the
@@ -900,7 +917,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       currentUrl: url,
       brightness: Math.round(defaultBrightness * 100),
       screensaverActive: isScreensaverActive,
-      kioskMode: true, // Always in kiosk mode when this screen is active
+      kioskMode: kioskEnabled,
       canGoBack: false,
       loading: false,
       rotationEnabled: urlRotationEnabled,
@@ -912,7 +929,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       autoBrightnessMax: autoBrightnessMax,
       motionAlwaysOn: motionAlwaysOn,
     });
-  }, [url, defaultBrightness, isScreensaverActive, urlRotationEnabled, urlRotationList, urlRotationInterval, currentUrlIndex, autoBrightnessEnabled, autoBrightnessMin, autoBrightnessMax, motionAlwaysOn]);
+  }, [url, defaultBrightness, isScreensaverActive, kioskEnabled, urlRotationEnabled, urlRotationList, urlRotationInterval, currentUrlIndex, autoBrightnessEnabled, autoBrightnessMin, autoBrightnessMax, motionAlwaysOn]);
 
   // Countdown timer effect (transparent - no UI)
   useEffect(() => {
@@ -1514,6 +1531,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       const savedAutoReload = bool(K.AUTO_RELOAD, true);
       const savedPauseWebMediaWhenHidden = bool(K.PAUSE_WEB_MEDIA_WHEN_HIDDEN, true);
       const savedKioskEnabled = bool(K.KIOSK_ENABLED, false);
+      setKioskEnabled(savedKioskEnabled);
       const savedScreensaverEnabled = bool(K.SCREENSAVER_ENABLED, false);
       const savedDefaultBrightness = num(K.DEFAULT_BRIGHTNESS, 0.5);
       const savedScreensaverBrightness = num(K.SCREENSAVER_BRIGHTNESS, 0);

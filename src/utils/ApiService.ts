@@ -22,6 +22,8 @@ export interface ApiCallbacks {
   onScreenOff?: () => void;
   onScreensaverOn?: () => void;
   onScreensaverOff?: () => void;
+  onKioskOn?: () => void;
+  onKioskOff?: () => void;
   onWake?: () => void;
   onReload?: () => void;
   onSetUrl?: (url: string) => void;
@@ -262,6 +264,16 @@ class ApiServiceClass {
       case 'screensaverOff':
         if (!cb.onScreensaverOff) return fail('Handler unavailable');
         cb.onScreensaverOff();
+        return ok();
+
+      case 'kioskOn':
+        if (!cb.onKioskOn) return fail('Handler unavailable');
+        cb.onKioskOn();
+        return ok();
+
+      case 'kioskOff':
+        if (!cb.onKioskOff) return fail('Handler unavailable');
+        cb.onKioskOff();
         return ok();
 
       case 'wake':
